@@ -31,7 +31,7 @@ if __name__=='__main__':
             o_im.save(root_path + "Nesf0/"+filename)
             #heatmap
             image_clip_feature = model(im) #image_clip_feature's size is torch.Size([1, 768, 1])
-            np.save(root_path + "Nesf0/"+filename[:-4]+"_image_clip_feature", image_clip_feature)
+            np.save(root_path + "Nesf0/"+filename[:-4]+"_image_clip_feature", image_clip_feature.cpu())
             #score = model.verify(image_clip_feature, "one, two, three and four") # score:  [0.17674114]
             #score = model.verify(image_clip_feature, "chair") # score:  [0.1314615]
             #score = model.verify(image_clip_feature, "apple, bench, sun, sky") # score:  [0.09562321]

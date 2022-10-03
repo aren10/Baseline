@@ -6,6 +6,7 @@ module load cuda/11.1.1
 module load cudnn/8.2.0
 module load anaconda/2020.02
 source /gpfs/runtime/opt/anaconda/2020.02/etc/profile.d/conda.sh
+conda activate PL3DS_Baseline
 
 [Jiahao Li](https://www.linkedin.com/in/jiahaoli95/), [Greg Shakhnarovich](https://home.ttic.edu/~gregory/), [Raymond A. Yeh](https://raymond-yeh.com)<br/>
 Toyota Technological Institute at Chicago (TTIC)<br/>
