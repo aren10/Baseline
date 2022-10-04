@@ -1,13 +1,14 @@
 import torch
 from torch.utils.data import Dataset
 import sys
-sys.path.append('../')
+sys.path.append('/Users/jfgvl1187/Desktop/CSCI 2980 3D Vision Research/Phrase Localization in 3D Scene/Sementic CLIP Neural Field/Baseline/models')
+#from models.slic_vit import SLICViT
+from slic_vit import SLICViT
 import glob
 import numpy as np
 import os
 import cv2
 from torchvision import transforms as T
-
 from typing import Optional
 # from .rays import *
 from torch.utils.data import Dataset, DataLoader
@@ -18,7 +19,6 @@ import json
 #from epath import Path
 from load_blender import pose_spherical
 import torch
-from models.slic_vit import SLICViT
 from PIL import Image
 import os.path as osp
 import imageio.v2 as imageio
@@ -42,10 +42,9 @@ class Nesf_Dataset():
         self.main()
 
     def main(self):
-        split = "train"
         # if self.split == "val":
         #     split = "test"
-        data, self.metadata = klevr.make_examples(data_dir=self.root_dir, split=split, image_idxs=self.indices, scale=self.scale, enable_sqrt2_buffer=False)
+        data, self.metadata = klevr.make_examples(data_dir=self.root_dir, split=self.split, image_idxs=self.indices, scale=self.scale, enable_sqrt2_buffer=False)
         # data, self.metadata = klevr.make_unreal_examples(data_dir=self.root_dir, split=split)
         self.imgs = data.target_view
 
@@ -125,7 +124,6 @@ class Nesf_Dataset():
 
 
 def load_Nesf_data(basedir, half_res=False, testskip=1, use_saliency = False):
-
     model = SLICViT
     model_args = {
         'model': 'vit14',
@@ -138,9 +136,9 @@ def load_Nesf_data(basedir, half_res=False, testskip=1, use_saliency = False):
         'compactness': 50,
         'sigma': 0,
     }
-    model = model(**model_args)#.cuda()
 
-    with open(os.path.join(basedir,"metadata.json"), 'r') as fp:
+    model = model(**model_args)#.cuda()
+    with open(os.path.join(basedir,"metadata.json"), 'r') as fp: #base_dir is "../data/toybox-13/0"
             file = json.load(fp)
     splits = ['train', 'val', 'test']
     metas = {}
@@ -148,7 +146,18 @@ def load_Nesf_data(basedir, half_res=False, testskip=1, use_saliency = False):
     W = file["metadata"]['width']
     focal = file["camera"]['focal_length']
 
-    dataloader = Nesf_Dataset(basedir)
+    dataloader = Nesf_Dataset(basedir, split = "test")
+    """
+    img = dataloader[0]["image"]
+    pose = dataloader[0]["pose"]
+    index = dataloader[0]["img_ids"]
+
+    print(img)
+    print(pose)
+    print(index)
+    print(len(dataloader))
+    exit(0)
+    """
     near = dataloader.near
     far = dataloader.far
     K = dataloader[0]["Intrinsics"]
@@ -276,7 +285,7 @@ def load_Nesf_data(basedir, half_res=False, testskip=1, use_saliency = False):
         return imgs, poses, render_poses, [H, W, focal], i_split, near, far, K
 
 if __name__== "__main__":
-    load_Nesf_data("/gpfs/data/ssrinath/ychen485/implicitSearch/implicitObjDetection/toybox-13/0")
+    load_Nesf_data("../data/toybox-13/0")
     # pt = Path()
 
     # dataset_dir = "/gpfs/data/ssrinath/ychen485/implicitSearch/implicitObjDetection/toybox-13/0"

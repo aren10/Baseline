@@ -40,8 +40,8 @@ class Image_CLIP(nn.Module):
             im = Image.fromarray(im).convert('RGB')
             im = im.resize((224, 224))
             masks = self.get_masks(np.array(im))
-            masks = torch.from_numpy(masks.astype(np.bool)).cuda()
-            im = self.model.preprocess(im).unsqueeze(0).cuda()
+            masks = torch.from_numpy(masks.astype(np.bool))#.cuda()
+            im = self.model.preprocess(im).unsqueeze(0)#.cuda()
             image_features = self.model(im, masks) # same as model.encode_image
             image_features = image_features.permute(0, 2, 1)
             image_features = image_features / image_features.norm(dim=1, keepdim=True)
@@ -49,7 +49,7 @@ class Image_CLIP(nn.Module):
     
     def verify(self, image_features, text):
         with torch.no_grad():
-            text = clip.tokenize([text]).cuda()
+            text = clip.tokenize([text])#.cuda()
             text_features = self.model.encode_text(text)
             text_features = text_features / text_features.norm(dim=1, keepdim=True)
             logits = (image_features * text_features.unsqueeze(-1)).sum(1)

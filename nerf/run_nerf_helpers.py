@@ -16,31 +16,25 @@ class Embedder:
     def __init__(self, **kwargs):
         self.kwargs = kwargs
         self.create_embedding_fn()
-        
     def create_embedding_fn(self):
         embed_fns = []
-        d = self.kwargs['input_dims']
+        d = self.kwargs['input_dims'] #d = 3
         out_dim = 0
-        if self.kwargs['include_input']:
-            embed_fns.append(lambda x : x)
-            out_dim += d
-            
-        max_freq = self.kwargs['max_freq_log2']
-        N_freqs = self.kwargs['num_freqs']
-        
-        if self.kwargs['log_sampling']:
-            freq_bands = 2.**torch.linspace(0., max_freq, steps=N_freqs)
+        if self.kwargs['include_input']: #include_input = True
+            embed_fns.append(lambda x : x) #embed_fns = [x=f(x)]
+            out_dim += d #out_dim = 3
+        max_freq = self.kwargs['max_freq_log2'] #max_freq = 9
+        N_freqs = self.kwargs['num_freqs'] #N_freqs = 10
+        if self.kwargs['log_sampling']: #log_sampling = True
+            freq_bands = 2.**torch.linspace(0., max_freq, steps=N_freqs) # tensor([  1.,   2.,   4.,   8.,  16.,  32.,  64., 128., 256., 512.])
         else:
             freq_bands = torch.linspace(2.**0., 2.**max_freq, steps=N_freqs)
-            
         for freq in freq_bands:
             for p_fn in self.kwargs['periodic_fns']:
                 embed_fns.append(lambda x, p_fn=p_fn, freq=freq : p_fn(x * freq))
-                out_dim += d
-                    
-        self.embed_fns = embed_fns
-        self.out_dim = out_dim
-        
+                out_dim += d       
+        self.embed_fns = embed_fns # len 为 1 + 20 = 21
+        self.out_dim = out_dim # 3 + 3 * 20 = 63
     def embed(self, inputs):
         return torch.cat([fn(inputs) for fn in self.embed_fns], -1)
 
@@ -50,7 +44,6 @@ def get_embedder(multires, i=0):
     # print("-----------------------------------------")
     if i == -1:
         return nn.Identity(), 3
-    
     embed_kwargs = {
                 'include_input' : True,
                 'input_dims' : 3,
@@ -59,47 +52,45 @@ def get_embedder(multires, i=0):
                 'log_sampling' : True,
                 'periodic_fns' : [torch.sin, torch.cos],
     }
-    
     embedder_obj = Embedder(**embed_kwargs)
-    embed = lambda x, eo=embedder_obj : eo.embed(x)
+    embed = lambda x, eo=embedder_obj : eo.embed(x) #torch.cat([fn(x) for fn in embed_fns], -1)
     return embed, embedder_obj.out_dim
 
 
 # Model
 class NeRF(nn.Module):
-    def __init__(self, D=8, W=256, input_ch=3, input_ch_views=3, output_ch=4, skips=[4], use_viewdirs=False, with_saliency=False):
-        """ 
-        """
+    def __init__(self, D=8, W=256, input_ch=3, input_ch_views=3, output_ch=4, skips=[4], use_viewdirs=False, with_saliency=False, with_CLIP=False, clip_dim=768):
         super(NeRF, self).__init__()
         self.D = D
         self.W = W
-        self.input_ch = input_ch
-        self.input_ch_views = input_ch_views
+        self.input_ch = input_ch #63
+        self.input_ch_views = input_ch_views #0
         self.skips = skips
-        self.use_viewdirs = use_viewdirs
+        self.use_viewdirs = use_viewdirs #False
         self.with_saliency = with_saliency
-        
-        self.pts_linears = nn.ModuleList(
-            [nn.Linear(input_ch, W)] + [nn.Linear(W, W) if i not in self.skips else nn.Linear(W + input_ch, W) for i in range(D-1)])
-        
+        self.with_CLIP = with_CLIP
+        self.clip_dim = clip_dim
+        self.pts_linears = nn.ModuleList([nn.Linear(input_ch, W)] + [nn.Linear(W, W) if i not in self.skips else nn.Linear(W + input_ch, W) for i in range(D-1)]) # input in 0th and 4th layer
         ### Implementation according to the official code release (https://github.com/bmild/nerf/blob/master/run_nerf_helpers.py#L104-L105)
-        self.views_linears = nn.ModuleList([nn.Linear(input_ch_views + W, W//2)])
-
+        self.views_linears = nn.ModuleList([nn.Linear(input_ch_views + W, W//2)]) # 256 -> 128
         ### Implementation according to the paper
         # self.views_linears = nn.ModuleList(
         #     [nn.Linear(input_ch_views + W, W//2)] + [nn.Linear(W//2, W//2) for i in range(D//2)])
         # print("using_viewdirs:",use_viewdirs )
-        
         if use_viewdirs:
             self.feature_linear = nn.Linear(W, W)
             self.alpha_linear = nn.Linear(W, 1)
             self.rgb_linear = nn.Linear(W//2, 3)
         else:
-            self.output_linear = nn.Linear(W, output_ch)
+            self.output_linear = nn.Linear(W, output_ch) #256 -> 4
         if with_saliency:
             self.featureS_linear = nn.Linear(W, W)
             self.alphaS_linear = nn.Linear(W, 1)
             self.saliency_linear = nn.Linear(W//2, 1)
+        if with_CLIP:
+            self.featureCLIP_linear = nn.Linear(W, W)
+            self.alphaCLIP_linear = nn.Linear(W, 1)
+            self.CLIP_linear = nn.Linear(W//2, self.clip_dim)
 
     def forward(self, x):
         input_pts, input_views = torch.split(x, [self.input_ch, self.input_ch_views], dim=-1)
@@ -109,7 +100,8 @@ class NeRF(nn.Module):
             h = F.relu(h)
             if i in self.skips:
                 h = torch.cat([input_pts, h], -1)
-
+        #print(h.shape) torch.Size([65536, 256])
+        #__________________
         if self.with_saliency:
             alphaS = self.alphaS_linear(h)
             featureS = self.featureS_linear(h)
@@ -121,7 +113,18 @@ class NeRF(nn.Module):
 
             saliency = self.saliency_linear(hs)
             outputsS = torch.cat([saliency, alphaS], -1)
+        if self.with_CLIP:
+            alphaCLIP = self.alphaCLIP_linear(h)
+            featureCLIP = self.featureCLIP_linear(h)
+            hs = torch.cat([featureCLIP, input_views], -1)
+        
+            for i, l in enumerate(self.views_linears):
+                hs = self.views_linears[i](hs)
+                hs = F.relu(hs)
 
+            CLIP_val = self.CLIP_linear(hs)
+            outputsS = torch.cat([CLIP_val, alphaCLIP], -1)
+        #__________________
         if self.use_viewdirs:
             alpha = self.alpha_linear(h)
             feature = self.feature_linear(h)
@@ -141,8 +144,8 @@ class NeRF(nn.Module):
             outputs = self.output_linear(h)
             if self.with_saliency:
                 outputs = torch.cat([saliency, alphaS], -1)
-            
-
+            if self.with_CLIP:
+                outputs = torch.cat([CLIP_val, alphaCLIP], -1) #torch.Size([65536, 769])
         return outputs    
 
     def load_weights_from_keras(self, weights):
@@ -191,6 +194,7 @@ def get_rays(H, W, K, c2w):
 
 def get_rays_np(H, W, K, c2w):
     i, j = np.meshgrid(np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32), indexing='xy')
+    K = np.array(K)
     dirs = np.stack([(i-K[0][2])/K[0][0], -(j-K[1][2])/K[1][1], -np.ones_like(i)], -1)
     # Rotate ray directions from camera frame to the world frame
     rays_d = np.sum(dirs[..., np.newaxis, :] * c2w[:3,:3], -1)  # dot product, equals to: [c2w.dot(dir) for dir in dirs]

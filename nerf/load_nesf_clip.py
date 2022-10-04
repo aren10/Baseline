@@ -1,13 +1,14 @@
 import torch
 from torch.utils.data import Dataset
 import sys
-sys.path.append('../')
+sys.path.append('/Users/jfgvl1187/Desktop/CSCI 2980 3D Vision Research/Phrase Localization in 3D Scene/Sementic CLIP Neural Field/Baseline/models')
+#from models.slic_vit import SLICViT
+from slic_vit import SLICViT
 import glob
 import numpy as np
 import os
 import cv2
 from torchvision import transforms as T
-
 from typing import Optional
 # from .rays import *
 from torch.utils.data import Dataset, DataLoader
@@ -18,7 +19,6 @@ import json
 #from epath import Path
 from load_blender import pose_spherical
 import torch
-from models.slic_vit import SLICViT
 from PIL import Image
 import os.path as osp
 import imageio.v2 as imageio
@@ -27,7 +27,7 @@ import imageio.v2 as imageio
 
 
 
-class Nesf_Dataset():
+class Nesf_CLIP_Dataset():
     def __init__(self, dataset_dir, split="train", indices=None, scale=1, near=0, far=30):
         self.root_dir = dataset_dir
         self.near = near
@@ -42,10 +42,9 @@ class Nesf_Dataset():
         self.main()
 
     def main(self):
-        split = "train"
         # if self.split == "val":
         #     split = "test"
-        data, self.metadata = klevr.make_examples(data_dir=self.root_dir, split=split, image_idxs=self.indices, scale=self.scale, enable_sqrt2_buffer=False)
+        data, self.metadata = klevr.make_examples(data_dir=self.root_dir, split=self.split, image_idxs=self.indices, scale=self.scale, enable_sqrt2_buffer=False)
         # data, self.metadata = klevr.make_unreal_examples(data_dir=self.root_dir, split=split)
         self.imgs = data.target_view
 
@@ -124,8 +123,7 @@ class Nesf_Dataset():
 
 
 
-def load_Nesf_data(basedir, half_res=False, testskip=1, use_saliency = False):
-
+def load_Nesf_CLIP_data(basedir, clip_basedir, use_CLIP = False):
     model = SLICViT
     model_args = {
         'model': 'vit14',
@@ -139,26 +137,27 @@ def load_Nesf_data(basedir, half_res=False, testskip=1, use_saliency = False):
         'sigma': 0,
     }
     model = model(**model_args)#.cuda()
-
-    with open(os.path.join(basedir,"metadata.json"), 'r') as fp:
+    with open(os.path.join(basedir,"metadata.json"), 'r') as fp: #base_dir is "../data/toybox-13/0"
             file = json.load(fp)
     splits = ['train', 'val', 'test']
     metas = {}
     H = file["metadata"]['height']
     W = file["metadata"]['width']
     focal = file["camera"]['focal_length']
+    all_imgs = []
+    all_poses = []
+    all_clips = []
+    counts = [0]
 
-    dataloader = Nesf_Dataset(basedir)
+
+    dataloader = Nesf_CLIP_Dataset(basedir, split = "train")
+    print(len(dataloader))
     near = dataloader.near
     far = dataloader.far
     K = dataloader[0]["Intrinsics"]
-    all_imgs = []
-    all_poses = []
-    all_saliencies = []
-    counts = [0]
     imgs = []
     poses = []
-    saliencies = []
+    clips = []
     for i in range(len(dataloader)):
         img = dataloader[i]["image"]
         pose = dataloader[i]["pose"]
@@ -167,16 +166,20 @@ def load_Nesf_data(basedir, half_res=False, testskip=1, use_saliency = False):
         # real_img = np.uint8((img)*255)
         index = (dataloader[i]["img_ids"])
         # print(index[-5:])
-        if use_saliency:
+        if use_CLIP:
             # fname = "rgba_" + index[-5:] + '_heat.npy'
-        #     saliencies.append(np.load(fname))
-            fname = "rgba_" + index[-5:] + '_heat.png'
-            dir = "/gpfs/data/ssrinath/ychen485/implicitSearch/implicitObjDetection/Nesf0/"
-            fname = os.path.join(dir, fname)
-            saliencies.append(imageio.imread(fname))
-    if use_saliency:
-        saliencies = (4* np.array(saliencies) / 255.).astype(np.float32)
-        all_saliencies.append(saliencies)
+            # saliencies.append(np.load(fname))
+            # rgba_00042_image_clip_feature.npy
+            fname = "rgba_" + index[-5:] + '_image_clip_feature.npy'
+            fname = os.path.join(clip_basedir, fname)
+            #fname = '../data/Nesf0/rgba_00042_image_clip_feature.npy'
+            clips_val = np.load(fname)
+            #print(clips_val)
+            #print(clips_val.shape)
+            clips.append(clips_val)
+    if use_CLIP:
+        clips = np.array(clips).astype(np.float32)
+        all_clips.append(clips)
         # # print(real_img.shape)
         # heatmap = getHeatmap(model, real_img , "chair")
         # saliency = heatmap*200
@@ -185,20 +188,19 @@ def load_Nesf_data(basedir, half_res=False, testskip=1, use_saliency = False):
         # h_im = Image.fromarray(saliency).convert ('RGB')
         # o_im.save("/gpfs/data/ssrinath/ychen485/implicitSearch/implicitObjDetection/dataDemo/"+str(index)+".png")
         # h_im.save("/gpfs/data/ssrinath/ychen485/implicitSearch/implicitObjDetection/dataDemo/"+str(i)+"_heat.png")
-
     imgs = (np.array(imgs)).astype(np.float32) # keep all 4 channels (RGBA)
     poses = np.array(poses).astype(np.float32)
-    print("imgs: ", imgs.shape)
-    print("poses: ", poses.shape)
-    # print("saliencies: ", saliencies.shape)
     counts.append(counts[-1] + imgs.shape[0])
     all_imgs.append(imgs)
     all_poses.append(poses)
 
-    dataloader = Nesf_Dataset(basedir, split="test")
+
+
+    dataloader = Nesf_CLIP_Dataset(basedir, split="test")
+    print(len(dataloader))
     imgs = []
     poses = []
-    saliencies = []
+    clips = []
     for i in range(len(dataloader)):
         img = dataloader[i]["image"]
         pose = dataloader[i]["pose"]
@@ -206,30 +208,33 @@ def load_Nesf_data(basedir, half_res=False, testskip=1, use_saliency = False):
         poses.append(pose)
         index = (dataloader[i]["img_ids"])
         # print(index[-5:])
-        if use_saliency:
+        if use_CLIP:
             # fname = "rgba_" + index[-5:] + '_heat.npy'
-        #     saliencies.append(np.load(fname))
-            fname = "rgba_" + index[-5:] + '_heat.png'
-            dir = "/gpfs/data/ssrinath/ychen485/implicitSearch/implicitObjDetection/Nesf0/"
-            fname = os.path.join(dir, fname)
-            saliencies.append(imageio.imread(fname))
-    if use_saliency:
-        saliencies = (4* np.array(saliencies) / 255.).astype(np.float32)
-        all_saliencies.append(saliencies)
+            # saliencies.append(np.load(fname))
+            fname = "rgba_" + index[-5:] + '_image_clip_feature.npy'
+            fname = os.path.join(clip_basedir, fname)
+            #fname = '../data/Nesf0/rgba_00042_image_clip_feature.npy'
+            clips_val = np.load(fname)
+            #print(clips_val)
+            #print(clips_val.shape)
+            clips.append(clips_val)
+    if use_CLIP:
+        clips = np.array(clips).astype(np.float32)
+        all_clips.append(clips)
     imgs = (np.array(imgs)).astype(np.float32) # keep all 4 channels (RGBA)
     poses = np.array(poses).astype(np.float32)
-    print("imgs: ", imgs.shape)
-    print("poses: ", poses.shape)
     # print("saliencies: ", saliencies.shape)
-
     counts.append(counts[-1] + imgs.shape[0])
     all_imgs.append(imgs)
     all_poses.append(poses)
 
-    dataloader = Nesf_Dataset(basedir, split="test")
+
+
+    dataloader = Nesf_CLIP_Dataset(basedir, split="test")
+    print(len(dataloader))
     imgs = []
     poses = []
-    saliencies = []
+    clips = []
     for i in range(len(dataloader)):
         img = dataloader[i]["image"]
         pose = dataloader[i]["pose"]
@@ -237,46 +242,44 @@ def load_Nesf_data(basedir, half_res=False, testskip=1, use_saliency = False):
         poses.append(pose)
         index = (dataloader[i]["img_ids"])
         # print(index[-5:])
-        if use_saliency:
+        if use_CLIP:
             # fname = "rgba_" + index[-5:] + '_heat.npy'
-        #     saliencies.append(np.load(fname))
-            fname = "rgba_" + index[-5:] + '_heat.png'
-            dir = "/gpfs/data/ssrinath/ychen485/implicitSearch/implicitObjDetection/Nesf0/"
-            fname = os.path.join(dir, fname)
-            saliencies.append(imageio.imread(fname))
-    if use_saliency:
-        saliencies = (4* np.array(saliencies) / 255.).astype(np.float32)
-        all_saliencies.append(saliencies)
+            # saliencies.append(np.load(fname))
+            fname = "rgba_" + index[-5:] + '_image_clip_feature.npy'
+            fname = os.path.join(clip_basedir, fname)
+            #fname = '../data/Nesf0/rgba_00042_image_clip_feature.npy'
+            clips_val = np.load(fname)
+            #print(clips_val)
+            #print(clips_val.shape)
+            clips.append(clips_val)
+    if use_CLIP:
+        clips = np.array(clips).astype(np.float32)
+        all_clips.append(clips)
     imgs = (np.array(imgs)).astype(np.float32) # keep all 4 channels (RGBA)
     poses = np.array(poses).astype(np.float32)
-    print("imgs: ", imgs.shape)
-    print("poses: ", poses.shape)
     # print("saliencies: ", saliencies.shape)
-
     counts.append(counts[-1] + imgs.shape[0])
     all_imgs.append(imgs)
     all_poses.append(poses)
 
     #-------------------------------loaded all 3 sets of data--------------------------------------
-    i_split = [np.arange(counts[i], counts[i+1]) for i in range(3)]
-    
+    i_split = [np.arange(counts[i], counts[i+1]) for i in range(3)] #[array([0, 1, 2]), array([3, 4]), array([5, 6])]
     imgs = np.concatenate(all_imgs, 0)
     poses = np.concatenate(all_poses, 0)
-    if use_saliency:
-        saliencies = np.concatenate(all_saliencies, 0)
-    print("imgs, poses, i_split: ", imgs.shape, poses.shape, len(i_split))
+    if use_CLIP:
+        clips = np.concatenate(all_clips, 0)
+    print("imgs, poses, i_split: ", imgs.shape, poses.shape, len(i_split)) #imgs, poses, i_split:  (7, 256, 256, 3) (7, 4, 4) 3
     render_poses = torch.stack([pose_spherical(angle, -30.0, 4.0) for angle in np.linspace(-180,180,40+1)[:-1]], 0)
-
     # for i in range(10):
     #     print (poses[i])
     # print(imgs[0])
-    if use_saliency:
-        return imgs, saliencies, poses, render_poses, [H, W, focal], i_split, near, far, K
+    if use_CLIP:
+        return imgs, clips, poses, render_poses, [H, W, focal], i_split, near, far, K
     else:
         return imgs, poses, render_poses, [H, W, focal], i_split, near, far, K
 
-if __name__== "__main__":
-    load_Nesf_data("/gpfs/data/ssrinath/ychen485/implicitSearch/implicitObjDetection/toybox-13/0")
+#if __name__== "__main__":
+    #load_Nesf_CLIP_data("../data/toybox-13/0")
     # pt = Path()
 
     # dataset_dir = "/gpfs/data/ssrinath/ychen485/implicitSearch/implicitObjDetection/toybox-13/0"

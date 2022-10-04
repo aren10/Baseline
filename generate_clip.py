@@ -16,10 +16,10 @@ if __name__=='__main__':
         'compactness': 50,
         'sigma': 0,
     }
-    model = Image_CLIP(**args).cuda()
+    model = Image_CLIP(**args)#.cuda()
 
-    root_path = '/users/aren10/data/'
-    #root_path = '../data/'
+    #root_path = '/users/aren10/data/'
+    root_path = '../data/'
 
     data_path = root_path + 'toybox-13/0/'
     directories = os.listdir(data_path)
