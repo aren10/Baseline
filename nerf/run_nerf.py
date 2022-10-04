@@ -991,7 +991,7 @@ def train():
                     saliency_s = saliency_s[:,0]
                     print(saliency_s.shape)                 
                 if args.with_clip:
-                    one_matrix = np.ones((target_s.shape[0], clip.shape[1]))
+                    one_matrix = torch.ones((target_s.shape[0], clip.shape[1]))
                     clip_reshaped = clip[:,:,0]
                     clip_s = clip_reshaped * one_matrix
 
