@@ -673,7 +673,7 @@ def config_parser():
                         help='frequency of console printout and metric loggin')
     parser.add_argument("--i_img",     type=int, default=500, 
                         help='frequency of tensorboard image logging')
-    parser.add_argument("--i_weights", type=int, default=10000, 
+    parser.add_argument("--i_weights", type=int, default=50, 
                         help='frequency of weight ckpt saving')
     parser.add_argument("--i_testset", type=int, default=10000, 
                         help='frequency of testset saving')
@@ -809,6 +809,9 @@ def train():
         print('Loaded blender', images.shape, render_poses.shape, hwf, args.datadir)
         i_train, i_val, i_test = i_split
         images = images[...,:3]
+        print(i_split)
+        print(i_train)
+        print(i_test)
         # near = 0.
         # far = 50.
 
@@ -1042,7 +1045,7 @@ def train():
         # print(f"Step: {global_step}, Loss: {loss}, Time: {dt}")
         #####           end            #####
         # Rest is logging
-        if i%args.i_weights==0 or i == 3:
+        if i%args.i_weights==0:
             path = os.path.join(basedir, expname, '{:06d}.tar'.format(i))
             torch.save({
                 'global_step': global_step,
