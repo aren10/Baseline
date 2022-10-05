@@ -349,7 +349,7 @@ def render_path(render_poses, hwf, K, chunk, render_kwargs, gt_imgs=None, savedi
     return rgbs, disps
 
 
-def create_nerf(args):
+def create_nerf(args, test_file):
     """Instantiate NeRF's MLP model.
     """
     #------------------positional encoding stuff-------------------------
@@ -412,7 +412,8 @@ def create_nerf(args):
     if args.ft_path is not None and args.ft_path!='None':
         ckpts = [args.ft_path]
     else:
-        ckpts = [os.path.join(basedir, expname, f) for f in sorted(os.listdir(os.path.join(basedir, expname))) if 'tar' in f]
+        #ckpts = [os.path.join(basedir, expname, f) for f in sorted(os.listdir(os.path.join(basedir, expname))) if 'tar' in f]
+        ckpts = [os.path.join(basedir, expname, test_file)]
     print('Found ckpts', ckpts) #[]
     if len(ckpts) > 0 and not args.no_reload:
         ckpt_path = ckpts[-1]
@@ -556,7 +557,7 @@ def raw2outputs(raw, z_vals, rays_d, raw_noise_std=0, white_bkgd=False, pytest=F
 
 
 
-def config_parser():
+def config_parser(flag):
 
     import configargparse
     parser = configargparse.ArgumentParser()
@@ -621,12 +622,22 @@ def config_parser():
     parser.add_argument("--raw_noise_std", type=float, default=0., 
                         help='std dev of noise added to regularize sigma_a output, 1e0 recommended')
 
-    parser.add_argument("--render_only", action='store_true', default = False,
-                        help='do not optimize, reload weights and render out render_poses path')
-    parser.add_argument("--render_test", action='store_true', default = False,
-                        help='render the test set instead of render_poses path')
-    parser.add_argument("--render_factor", type=int, default=0, 
-                        help='downsampling factor to speed up rendering, set 4 or 8 for fast preview')
+    if(flag == "train"):
+        print("_____________________training")
+        parser.add_argument("--render_only", action='store_true', default = False,
+                            help='do not optimize, reload weights and render out render_poses path')
+        parser.add_argument("--render_test", action='store_true', default = False,
+                            help='render the test set instead of render_poses path')
+        parser.add_argument("--render_factor", type=int, default=0, 
+                            help='downsampling factor to speed up rendering, set 4 or 8 for fast preview')
+    elif(flag == "test"):
+        print("_____________________testing")
+        parser.add_argument("--render_only", action='store_true', default = True,
+                            help='do not optimize, reload weights and render out render_poses path')
+        parser.add_argument("--render_test", action='store_true', default = True,
+                            help='render the test set instead of render_poses path')
+        parser.add_argument("--render_factor", type=int, default=0, 
+                            help='downsampling factor to speed up rendering, set 4 or 8 for fast preview')  
 
     # training options
     parser.add_argument("--precrop_iters", type=int, default=0,
@@ -684,40 +695,9 @@ def config_parser():
 
 
 
+def train(flag, test_file):
 
-
-
-
-
-
-
-
-def test():
-    pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def train():
-
-    parser = config_parser()
+    parser = config_parser(flag)
     args = parser.parse_args()
 
     # Load data
@@ -809,6 +789,7 @@ def train():
         print('Loaded blender', images.shape, render_poses.shape, hwf, args.datadir)
         i_train, i_val, i_test = i_split
         images = images[...,:3]
+        print("_____________________list of data")
         print(i_split)
         print(i_train)
         print(i_test)
@@ -847,7 +828,7 @@ def train():
 
 
     # Create nerf model
-    render_kwargs_train, render_kwargs_test, start, grad_vars, optimizer = create_nerf(args)
+    render_kwargs_train, render_kwargs_test, start, grad_vars, optimizer = create_nerf(args, test_file)
     global_step = start
     bds_dict = {
         'near' : near,
@@ -1128,8 +1109,11 @@ def train():
         global_step += 1
 
 
-
+import argparse
 if __name__=='__main__':
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     #torch.set_default_tensor_type('torch.FloatTensor')
-    train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--flag', required=True, choices=['train', 'test'])
+    parser.add_argument('--test_file', required=True, type=str) # 000550.tar
+    train(parser.flag, parser.test_file)
