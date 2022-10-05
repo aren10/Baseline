@@ -6,6 +6,8 @@ module load anaconda/2020.02
 source /gpfs/runtime/opt/anaconda/2020.02/etc/profile.d/conda.sh
 conda activate PL3DS_Baseline
 rm -r Baseline
+y
+y
 git clone https://github.com/aren10/Baseline.git
 cd Baseline/nerf
 python run_nerf.py --flag Test --test_file 000050.tar

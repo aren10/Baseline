@@ -1116,4 +1116,5 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--flag', required=True, choices=['train', 'test'])
     parser.add_argument('--test_file', required=True, type=str) # 000550.tar
-    train(parser.flag, parser.test_file)
+    args = parser.parse_args()
+    train(args.flag, args.test_file)
