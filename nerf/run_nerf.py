@@ -349,7 +349,7 @@ def render_path(render_poses, hwf, K, chunk, render_kwargs, gt_imgs=None, savedi
     return rgbs, disps
 
 
-def create_nerf(args, test_file):
+def create_nerf(args, flag, test_file):
     """Instantiate NeRF's MLP model.
     """
     #------------------positional encoding stuff-------------------------
@@ -412,8 +412,10 @@ def create_nerf(args, test_file):
     if args.ft_path is not None and args.ft_path!='None':
         ckpts = [args.ft_path]
     else:
-        #ckpts = [os.path.join(basedir, expname, f) for f in sorted(os.listdir(os.path.join(basedir, expname))) if 'tar' in f]
-        ckpts = [os.path.join(basedir, expname, test_file)]
+        if(flag == "train"):
+            ckpts = [os.path.join(basedir, expname, f) for f in sorted(os.listdir(os.path.join(basedir, expname))) if 'tar' in f]
+        elif(flag == "test"):
+            ckpts = [os.path.join(basedir, expname, test_file)]
     print('Found ckpts', ckpts) #[]
     if len(ckpts) > 0 and not args.no_reload:
         ckpt_path = ckpts[-1]
@@ -425,6 +427,7 @@ def create_nerf(args, test_file):
         model.load_state_dict(ckpt['network_fn_state_dict'])
         if model_fine is not None:
             model_fine.load_state_dict(ckpt['network_fine_state_dict'])
+    #exit(0)
     ##########################
     render_kwargs_train = {
         'network_query_fn' : network_query_fn,
@@ -557,27 +560,25 @@ def raw2outputs(raw, z_vals, rays_d, raw_noise_std=0, white_bkgd=False, pytest=F
 
 
 
-def config_parser(flag):
-
+def config_parser(env, flag):
     import configargparse
-    parser = configargparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument('--config', is_config_file=True, 
                         help='config file path')
     parser.add_argument("--expname", type=str, default="mac0",
                         help='experiment name')
     parser.add_argument("--basedir", type=str, default='./logs/', 
                         help='where to store ckpts and logs')
-    """
-    parser.add_argument("--datadir", type=str, default='../data/toybox-13/0/', 
-                        help='input data directory')
-    parser.add_argument("--clip_datadir", type=str, default='../data/Nesf0', 
-                        help='input data directory')
-    """
-    parser.add_argument("--datadir", type=str, default='/users/aren10/data/toybox-13/0/', 
-                        help='input data directory')
-    parser.add_argument("--clip_datadir", type=str, default='/users/aren10/data/Nesf0', 
-                        help='input data directory')
-
+    if(env == 'mac'):
+        parser.add_argument("--datadir", type=str, default='../data/toybox-13/0/', 
+                            help='input data directory')
+        parser.add_argument("--clip_datadir", type=str, default='../data/Nesf0', 
+                            help='input data directory')
+    elif(env == 'linux'):
+        parser.add_argument("--datadir", type=str, default='/users/aren10/data/toybox-13/0/', 
+                            help='input data directory')
+        parser.add_argument("--clip_datadir", type=str, default='/users/aren10/data/Nesf0', 
+                            help='input data directory')
     # training options
     parser.add_argument("--netdepth", type=int, default=8, 
                         help='layers in network')
@@ -684,22 +685,22 @@ def config_parser(flag):
                         help='frequency of console printout and metric loggin')
     parser.add_argument("--i_img",     type=int, default=500, 
                         help='frequency of tensorboard image logging')
-    parser.add_argument("--i_weights", type=int, default=50, 
-                        help='frequency of weight ckpt saving')
+    parser.add_argument("--i_weights")
     parser.add_argument("--i_testset", type=int, default=10000, 
                         help='frequency of testset saving')
     parser.add_argument("--i_video",   type=int, default=20000, 
                         help='frequency of render_poses video saving')
-
+    parser.add_argument("--env")
+    parser.add_argument("--flag")
+    parser.add_argument("--test_file")
     return parser
 
 
 
-def train(flag, test_file):
+def train(env, flag, test_file, i_weights):
 
-    parser = config_parser(flag)
+    parser = config_parser(env, flag)
     args = parser.parse_args()
-
     # Load data
     K = None
     if args.dataset_type == 'llff':
@@ -828,7 +829,7 @@ def train(flag, test_file):
 
 
     # Create nerf model
-    render_kwargs_train, render_kwargs_test, start, grad_vars, optimizer = create_nerf(args, test_file)
+    render_kwargs_train, render_kwargs_test, start, grad_vars, optimizer = create_nerf(args, flag, test_file)
     global_step = start
     bds_dict = {
         'near' : near,
@@ -1026,7 +1027,7 @@ def train(flag, test_file):
         # print(f"Step: {global_step}, Loss: {loss}, Time: {dt}")
         #####           end            #####
         # Rest is logging
-        if i%args.i_weights==0:
+        if i%i_weights==0:
             path = os.path.join(basedir, expname, '{:06d}.tar'.format(i))
             torch.save({
                 'global_step': global_step,
@@ -1111,10 +1112,14 @@ def train(flag, test_file):
 
 import argparse
 if __name__=='__main__':
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    #torch.set_default_tensor_type('torch.FloatTensor')
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--flag', required=True, choices=['train', 'test'])
-    parser.add_argument('--test_file', required=True, type=str) # 000550.tar
-    args = parser.parse_args()
-    train(args.flag, args.test_file)
+    parser_old = argparse.ArgumentParser()
+    parser_old.add_argument('--env', required=True, type=str, choices=['mac', 'linux']) # 000550.tar
+    parser_old.add_argument('--flag', required=True, choices=['train', 'test'])
+    parser_old.add_argument('--test_file', type=str, default="None") # 000550.tar
+    parser_old.add_argument("--i_weights", type=int, default=0)
+    args_old = parser_old.parse_args()
+    if(args_old.env == 'mac'):
+        torch.set_default_tensor_type('torch.FloatTensor')
+    elif(args_old.env == 'linux'):
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')        
+    train(args_old.env, args_old.flag, args_old.test_file, int(args_old.i_weights))
