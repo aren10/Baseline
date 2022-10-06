@@ -789,6 +789,7 @@ def train(env, flag, test_file, i_weights):
             images, poses, render_poses, hwf, i_split, near, far, K = load_Nesf_CLIP_data(args.datadir, args.clip_datadir, False)
         print('Loaded blender', images.shape, render_poses.shape, hwf, args.datadir)
         i_train, i_val, i_test = i_split
+        i_test = i_test[:2]
         images = images[...,:3]
         print("_____________________list of data")
         print(i_split)
@@ -845,12 +846,9 @@ def train(env, flag, test_file, i_weights):
     if args.render_only: #False. Test' number of rays > train's number of rays
         print('RENDER ONLY')
         print("i_test_shape: ", i_test.shape)
-        print(i_test)
-        print(i_test[:3])
         with torch.no_grad():
             if args.render_test:
                 # render_test switches to test poses
-                i_test = i_test[:2]
                 images = images[i_test]
                 clips = clips[i_test]
                 print(clips.shape)
