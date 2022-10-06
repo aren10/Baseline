@@ -844,12 +844,16 @@ def train(env, flag, test_file, i_weights):
     # Short circuit if only rendering out from trained model
     if args.render_only: #False. Test' number of rays > train's number of rays
         print('RENDER ONLY')
+        print("i_test_shape: ", i_test.shape)
+        print(i_test)
+        print(i_test[:3])
         with torch.no_grad():
             if args.render_test:
                 # render_test switches to test poses
                 i_test = i_test[:3]
                 images = images[i_test]
                 clips = clips[i_test]
+                print(clips.shape)
                 #print(clips.shape) (2, 1, 768, 1)
                 #print(render_poses.shape) torch.Size([2, 4, 4])
             else:
