@@ -847,6 +847,7 @@ def train(env, flag, test_file, i_weights):
         with torch.no_grad():
             if args.render_test:
                 # render_test switches to test poses
+                i_test = i_test[:3]
                 images = images[i_test]
                 clips = clips[i_test]
                 #print(clips.shape) (2, 1, 768, 1)
