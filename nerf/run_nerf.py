@@ -1121,5 +1121,5 @@ if __name__=='__main__':
     if(args_old.env == 'mac'):
         torch.set_default_tensor_type('torch.FloatTensor')
     elif(args_old.env == 'linux'):
-        torch.set_default_tensor_type('torch.cuda.FloatTensor')        
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
     train(args_old.env, args_old.flag, args_old.test_file, int(args_old.i_weights))

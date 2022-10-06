@@ -1,4 +1,5 @@
 # NeRF-pytorch
+ssh aren10@ssh.ccv.brown.edu
 interact -n 2 -t 12:00:00 -m 32g -q gpu  -X -g 2 -f geforce3090
 module load cuda/11.1.1
 module load cudnn/8.2.0
