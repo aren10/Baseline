@@ -95,6 +95,10 @@ class NeRF(nn.Module):
     def forward(self, x):
         input_pts, input_views = torch.split(x, [self.input_ch, self.input_ch_views], dim=-1)
         h = input_pts
+        #print("________x")
+        #print(x)
+        #print("________h")
+        #print(h)
         for i, l in enumerate(self.pts_linears):
             h = self.pts_linears[i](h)
             h = F.relu(h)
@@ -102,6 +106,8 @@ class NeRF(nn.Module):
                 h = torch.cat([input_pts, h], -1)
         #print(h.shape) torch.Size([65536, 256])
         #__________________
+        #print("________h")
+        #print(h)
         if self.with_saliency:
             alphaS = self.alphaS_linear(h)
             featureS = self.featureS_linear(h)
@@ -115,14 +121,19 @@ class NeRF(nn.Module):
             outputsS = torch.cat([saliency, alphaS], -1)
         if self.with_CLIP:
             alphaCLIP = self.alphaCLIP_linear(h)
+            #print("________alphaCLIP")
+            #print(alphaCLIP)
             featureCLIP = self.featureCLIP_linear(h)
+            #print("________featureCLIP")
+            #print(featureCLIP)
             hs = torch.cat([featureCLIP, input_views], -1)
-        
             for i, l in enumerate(self.views_linears):
                 hs = self.views_linears[i](hs)
                 hs = F.relu(hs)
 
             CLIP_val = self.CLIP_linear(hs)
+            #print("________CLIP_val")
+            #print(CLIP_val)
             outputsS = torch.cat([CLIP_val, alphaCLIP], -1)
         #__________________
         if self.use_viewdirs:
@@ -146,6 +157,8 @@ class NeRF(nn.Module):
                 outputs = torch.cat([saliency, alphaS], -1)
             if self.with_CLIP:
                 outputs = torch.cat([CLIP_val, alphaCLIP], -1) #torch.Size([65536, 769])
+            #print("________outputs")
+            #print(outputs)
         return outputs    
 
     def load_weights_from_keras(self, weights):

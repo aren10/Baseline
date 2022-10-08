@@ -136,7 +136,11 @@ def render_rays(ray_batch,
 
     pts = rays_o[...,None,:] + rays_d[...,None,:] * z_vals[...,:,None] # [N_rays, N_samples, 3] torch.Size([4096, 64, 3])
 #     raw = run_network(pts)
+    #print("start raw")
     raw = network_query_fn(pts, viewdirs, network_fn) # torch.Size([4096, 64, 769])
+    #print("____raw")
+    #print(raw)
+    #print(raw.size())
     if use_saliency:
         saliency_map, disp_map, acc_map, weights, depth_map = raw2outputs(raw, z_vals, rays_d, raw_noise_std, white_bkgd, pytest=pytest, saliency = True, clip = False)
         rgb_map = saliency_map
@@ -145,7 +149,9 @@ def render_rays(ray_batch,
         rgb_map = clip_map
     else:
         rgb_map, disp_map, acc_map, weights, depth_map = raw2outputs(raw, z_vals, rays_d, raw_noise_std, white_bkgd, pytest=pytest, saliency = False, clip = False)
-
+    #print("---------clip_map")
+    #print(clip_map)
+    #print(clip_map.size())
     if N_importance > 0:
         rgb_map_0, disp_map_0, acc_map_0 = rgb_map, disp_map, acc_map
 
@@ -186,6 +192,7 @@ def batchify_rays(rays_flat, chunk=1024*32, use_saliency = False, use_CLIP = Fal
     """
     all_ret = {}
     for i in range(0, rays_flat.shape[0], chunk):
+        #print("i: ", i)
         ret = render_rays(rays_flat[i:i+chunk],use_saliency = use_saliency, use_CLIP = use_CLIP, **kwargs)
         for k in ret:
             if k not in all_ret:
@@ -279,7 +286,7 @@ def render_CLIP_path(render_poses, hwf, K, chunk, render_kwargs, gt_imgs=None, s
     disps = []
     t = time.time()
     for i, c2w in enumerate(tqdm(render_poses)):
-        print(i, time.time() - t)
+        #print(i, time.time() - t)
         t = time.time()
         clips_est, disp, acc, _ = render(H, W, K, chunk=chunk, c2w=c2w[:3,:4], **render_kwargs, use_CLIP=use_clip)
         clips_ests.append(clips_est.cpu().numpy())
@@ -465,7 +472,8 @@ def raw2outputs(raw, z_vals, rays_d, raw_noise_std=0, white_bkgd=False, pytest=F
         weights: [num_rays, num_samples]. Weights assigned to each sampled color.
         depth_map: [num_rays]. Estimated distance to object.
     """
-    raw2alpha = lambda raw, dists, act_fn=F.relu: 1.-torch.exp(-act_fn(raw)*dists)
+    #raw2alpha = lambda raw, dists, act_fn=F.relu: 1.-torch.exp(-act_fn(raw)*dists)
+    raw2alpha = lambda raw, dists, act_fn=torch.sigmoid: 1.-torch.exp(-act_fn(raw)*dists)
 
     dists = z_vals[...,1:] - z_vals[...,:-1]
     dists = torch.cat([dists, torch.Tensor([1e10]).expand(dists[...,:1].shape)], -1)  # [N_rays, N_samples]
@@ -494,8 +502,13 @@ def raw2outputs(raw, z_vals, rays_d, raw_noise_std=0, white_bkgd=False, pytest=F
         acc_map = torch.sum(weightsS, -1)
     
     elif clip:
+
         clip_s = torch.sigmoid(raw[...,:-1])
-        print("clip_s shape:", clip_s.shape) #clip_s shape: torch.Size([4096, 64, 768])
+        #print("------raw")
+        #print(raw)
+        #print("____clip_s")
+        #print(clip_s)
+        #print(clip_s.size())
         noise = 0.
         if raw_noise_std > 0.:
             noise = torch.randn(raw[...,-1].shape) * raw_noise_std
@@ -505,12 +518,17 @@ def raw2outputs(raw, z_vals, rays_d, raw_noise_std=0, white_bkgd=False, pytest=F
                 np.random.seed(0)
                 noise = np.random.rand(*list(raw[...,-1].shape)) * raw_noise_std
                 noise = torch.Tensor(noise)
-
         alphaCLIP = raw2alpha(raw[...,-1] + noise, dists)  # [N_rays, N_samples] torch.Size([4096, 64])
+        #print("____raw[...,-1]")
+        #print(raw[...,-1])
+        #print(raw[...,-1].size())
+        #print("____alphaCLIP")
+        #print(alphaCLIP)
+        #print(alphaCLIP.size())
         # weights = alpha * tf.math.cumprod(1.-alpha + 1e-10, -1, exclusive=True)
         weightsCLIP = alphaCLIP * torch.cumprod(torch.cat([torch.ones((alphaCLIP.shape[0], 1)), 1.-alphaCLIP + 1e-10], -1), -1)[:, :-1]
+        #print(weightsCLIP)
         clip_map = torch.sum(weightsCLIP[...,None] * clip_s, -2)  # [N_rays, 768] torch.Size([4096, 768]) 
-
         depth_map = torch.sum(weightsCLIP * z_vals, -1)
         disp_map = 1./torch.max(1e-10 * torch.ones_like(depth_map), depth_map / torch.sum(weightsCLIP, -1))
         acc_map = torch.sum(weightsCLIP, -1)
@@ -1007,7 +1025,12 @@ def train(env, flag, test_file, i_weights):
             img_loss = img2mse(rgb, target_s)
         trans = extras['raw'][...,-1]
         loss = img_loss
-        print(loss)
+        #print("____________________________________________________________________________________________________")
+        #print("img_i: ", img_i)
+        #print("clip_est: ", clip_est)
+        #print("clip_s: ", clip_s)
+        print("iter: ", i)
+        print("training loss: ", loss)
         psnr = mse2psnr(img_loss)
 
         if 'rgb0' in extras:
