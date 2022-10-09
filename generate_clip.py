@@ -18,9 +18,8 @@ if __name__=='__main__':
     }
     model = Image_CLIP(**args).cuda()
 
-    #root_path = '/users/aren10/data/'
-    root_path = '../data/'
-
+    root_path = '/users/aren10/data/'
+    #root_path = '../data/'
     data_path = root_path + 'toybox-13/0/'
     directories = os.listdir(data_path)
     for filename in directories:
