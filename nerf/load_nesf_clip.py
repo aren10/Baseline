@@ -142,8 +142,10 @@ def load_Nesf_CLIP_data(basedir, clip_basedir, env, use_CLIP = False):
     }
     #model = model(**model_args)#.cuda()
     if(env == "linux"):
-        basedir = "/users/aren10/data/"
-    with open(os.path.join(basedir,"metadata.json"), 'r') as fp: #base_dir is "../data/toybox-13/0"
+        metadata_basedir = "/users/aren10/data/"
+    else:
+        metadata_basedir = basedir
+    with open(os.path.join(metadata_basedir,"metadata.json"), 'r') as fp: #base_dir is "../data/toybox-13/0"
             file = json.load(fp)
     splits = ['train', 'val', 'test']
     metas = {}
