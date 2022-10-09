@@ -47,14 +47,14 @@ class Image_CLIP(nn.Module):
             image_features = image_features / image_features.norm(dim=1, keepdim=True)
         return image_features
     
-    def verify(self, image_features, text):
+    def verify(self, image_features_normalized, text):
         with torch.no_grad():
+            image_features_normalized = torch.squeeze(image_features_normalized)
             text = clip.tokenize([text])#.cuda()
-            text_features = self.model.encode_text(text)
-            text_features = text_features / text_features.norm(dim=1, keepdim=True)
-            logits = (image_features * text_features.unsqueeze(-1)).sum(1)
-            assert logits.size(0) == 1
-            logits = logits.cpu().float().numpy()[0]
+            text_features = torch.squeeze(self.model.encode_text(text))
+            text_features_normalized = (text_features - torch.min(text_features)) / (torch.max(text_features) - torch.min(text_features))
+            logits = torch.dot(image_features_normalized, text_features_normalized) / (np.linalg.norm(image_features_normalized) * np.linalg.norm(text_features_normalized))
+            logits = logits.cpu().float().numpy()
         return logits
 
     def forward(self, im, **args):

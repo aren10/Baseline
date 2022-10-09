@@ -16,7 +16,7 @@ if __name__=='__main__':
         'compactness': 50,
         'sigma': 0,
     }
-    model = Image_CLIP(**args)#.cuda()
+    model = Image_CLIP(**args).cuda()
 
     #root_path = '/users/aren10/data/'
     root_path = '../data/'
@@ -31,11 +31,23 @@ if __name__=='__main__':
             o_im.save(root_path + "Nesf0/"+filename)
             #heatmap
             image_clip_feature = model(im) #image_clip_feature's size is torch.Size([1, 768, 1])
-            np.save(root_path + "Nesf0/"+filename[:-4]+"_image_clip_feature", image_clip_feature.cpu())
-            #score = model.verify(image_clip_feature, "one, two, three and four") # score:  [0.17674114]
-            #score = model.verify(image_clip_feature, "chair") # score:  [0.1314615]
-            #score = model.verify(image_clip_feature, "apple, bench, sun, sky") # score:  [0.09562321]
+            #print(img_path)
+            #print(image_clip_feature[0,0:10,0])
+            image_clip_feature_normalized = (image_clip_feature - torch.min(image_clip_feature)) / (torch.max(image_clip_feature) - torch.min(image_clip_feature))
+            #print(image_clip_feature.norm(dim=1))
+            #image_clip_feature_normalized_1 = image_clip_feature / image_clip_feature.norm(dim=1)
+            #print(image_clip_feature_normalized[0,0:10,0])
+            #print(image_clip_feature_normalized_1[0,0:10,0])
+            #exit(0)
+            #print(image_clip_feature_normalized[0,0:10,0])
+            #print(np.sum(np.array(image_clip_feature_normalized)))
+            #exit(0)
+            np.save(root_path + "Nesf0/"+filename[:-4]+"_image_clip_feature", image_clip_feature_normalized.cpu())
+            #score = model.verify(image_clip_feature_normalized, "one, two, three and four") # score:  [0.17674114]
+            #score = model.verify(image_clip_feature_normalized, "chair") # score:  [0.1314615]
+            #score = model.verify(image_clip_feature_normalized, "apple, bench, sun, sky") # score:  [0.09562321]
             #image_clip_feature = torch.tensor(np.load("data/Nesf0/rgba_00094_image_clip_feature.npy"))
-            #score = model.verify(image_clip_feature, "airplane, chair, rifle, boat") # score: [0.20882909]
+            #score = model.verify(image_clip_feature_normalized, "aaaaaaaaaaaaaa") # score: [0.20882909]
+            #score = model.verify(image_clip_feature_normalized, "chair") # score: [0.20882909]
             #print("score: ", score)
             print(filename+" saved")

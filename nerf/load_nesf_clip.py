@@ -54,6 +54,7 @@ class Nesf_CLIP_Dataset():
 
     def __getitem__(self, idx):
 
+        """
         if self.split == "train":
             idx -= ((idx // 5) + 1)
         elif self.split == "val":
@@ -65,7 +66,10 @@ class Nesf_CLIP_Dataset():
             index = idx -1
         else:
             index = idx
+        """
+
         sample = {}
+        index = idx
         
         # Reading Images                     
         sample["image"] = self.imgs.rgb[index]
@@ -156,13 +160,16 @@ def load_Nesf_CLIP_data(basedir, clip_basedir, use_CLIP = False):
     far = dataloader.far
     K = dataloader[0]["Intrinsics"]
     imgs = []
+    img_ids = []
     poses = []
     clips = []
     for i in range(len(dataloader)):
         img = dataloader[i]["image"]
         pose = dataloader[i]["pose"]
+        img_id = dataloader[i]["img_ids"]
         imgs.append(img)
         poses.append(pose)
+        img_ids.append(img_id)
         # real_img = np.uint8((img)*255)
         index = (dataloader[i]["img_ids"])
         # print(index[-5:])
@@ -171,12 +178,20 @@ def load_Nesf_CLIP_data(basedir, clip_basedir, use_CLIP = False):
             # saliencies.append(np.load(fname))
             # rgba_00042_image_clip_feature.npy
             fname = "rgba_" + index[-5:] + '_image_clip_feature.npy'
+            print(fname)
             fname = os.path.join(clip_basedir, fname)
             #fname = '../data/Nesf0/rgba_00042_image_clip_feature.npy'
             clips_val = np.load(fname)
             #print(clips_val)
             #print(clips_val.shape)
             clips.append(clips_val)
+    """
+    print(np.array(clips).shape)
+    for i in range(len(dataloader)):
+        print(i)
+        print(np.squeeze(np.array(clips))[i][0:10])
+    exit(0)
+    """
     if use_CLIP:
         clips = np.array(clips).astype(np.float32)
         all_clips.append(clips)
@@ -273,6 +288,13 @@ def load_Nesf_CLIP_data(basedir, clip_basedir, use_CLIP = False):
     # for i in range(10):
     #     print (poses[i])
     # print(imgs[0])
+    #print(clips.shape)
+    """
+    for i in i_split[0]:
+        print(i)
+        print(np.squeeze(np.array(clips))[i][0:10])
+    exit(0)
+    """
     if use_CLIP:
         return imgs, clips, poses, render_poses, [H, W, focal], i_split, near, far, K
     else:

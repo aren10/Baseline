@@ -7,9 +7,22 @@ import numpy as np
 
 # Misc
 img2mse = lambda x, y : torch.mean((y-x) ** 2)
+#clip_loss = lambda x, y : torch.dot(y, x) / (torch.norm(y) * torch.norm(x))
 mse2psnr = lambda x : -10. * torch.log(x) / torch.log(torch.Tensor([10.]))
 to8b = lambda x : (255*np.clip(x,0,1)).astype(np.uint8)
 
+def dot(x,y):
+    res =  torch.sum(x * y, dim = -1)
+    return res
+
+def clip_loss(x, y):
+    print("_____________")
+    x_norm = torch.norm(x,dim=-1)
+    y_norm = torch.norm(y,dim=-1)
+    loss_vec = 1 - dot(x,y) / (x_norm * y_norm)
+    loss = torch.mean(loss_vec)
+    return loss
+    
 
 # Positional encoding (section 5.1)
 class Embedder:

@@ -809,10 +809,29 @@ def train(env, flag, test_file, i_weights):
         i_train, i_val, i_test = i_split
         i_test = i_test[:2]
         images = images[...,:3]
+        """
+        print(clips.shape)
+        for i in i_train:
+            print(i)
+            print(np.squeeze(clips[i,:,0:10,:]))
+        print(np.squeeze(np.load("../data/nesf0/rgba_00042_image_clip_feature.npy"))[0:10])
+        exit(0)
+        """
+        """
+        print(images.shape)
+        for i in i_train:
+            print(i)
+            print(images[i,0:10,0,0])
+        v = np.array(imageio.imread('../data/toybox-13/0/rgba_00255.png'))[:,:,:3] / 255
+        print((v/255)[0:10,0,0])
+        exit(0)
+        """
+        """
         print("_____________________list of data")
         print(i_split)
         print(i_train)
         print(i_test)
+        """
         # near = 0.
         # far = 50.
 
@@ -886,8 +905,14 @@ def train(env, flag, test_file, i_weights):
                 one_matrix = np.ones((clips.shape[0], 256, 256, clips.shape[3]))
                 clips_full = clips * one_matrix
                 clips_ests, _ = render_CLIP_path(render_poses, hwf, K, args.chunk, render_kwargs_test, gt_imgs=images, savedir=testsavedir, render_factor=args.render_factor, use_clip = args.with_clip)
+                clips_ests = torch.tensor(clips_ests)
+                #print(clips_full[0,0,0,0:10])
+                #print(np.squeeze(np.load("../data/nesf0/rgba_00057_image_clip_feature.npy"))[0:10])
+                print(clips_full[0,0,0,0:10])
                 #print(clips_ests.shape) (2, 256, 256, 768)
-                print("loss in test is: ", img2mse(torch.tensor(clips_ests), torch.tensor(clips_full)))
+                clips_ests_normalized = (clips_ests - torch.unsqueeze(torch.min(clips_ests,-1)[0],-1)) / (torch.unsqueeze(torch.max(clips_ests,-1)[0],-1) - torch.unsqueeze(torch.min(clips_ests,-1)[0],-1))
+                print(clips_ests_normalized[0,0,0,0:10])
+                print("loss in test is: ", clip_loss(torch.tensor(clips_ests_normalized), torch.tensor(clips_full)))
 
             else:
                 rgbs, _ = render_path(render_poses, hwf, K, args.chunk, render_kwargs_test, gt_imgs=images, savedir=testsavedir, render_factor=args.render_factor)
@@ -1007,10 +1032,10 @@ def train(env, flag, test_file, i_weights):
                                                 verbose=i < 10, retraw=True,
                                                 **render_kwargs_train, use_saliency= TRUE, use_CLIP = False)
         elif args.with_clip:
-            print("clip")
             clip_est, disp, acc, extras = render(H, W, K, chunk=args.chunk, rays=batch_rays,
                                     verbose=i < 10, retraw=True,
                                     **render_kwargs_train, use_saliency= False, use_CLIP = True)
+            clip_est_normalized = (clip_est - torch.unsqueeze(torch.min(clip_est,1)[0],-1)) / (torch.unsqueeze(torch.max(clip_est,1)[0],-1) - torch.unsqueeze(torch.min(clip_est,1)[0],-1))
         else:
             rgb, disp, acc, extras = render(H, W, K, chunk=args.chunk, rays=batch_rays,
                                                 verbose=i < 10, retraw=True,
@@ -1020,7 +1045,12 @@ def train(env, flag, test_file, i_weights):
         if args.with_saliency:
             img_loss = img2mse(saliency, saliency_s)
         elif args.with_clip:
-            img_loss = img2mse(clip_est, clip_s) #torch.Size([4096, 768])
+            if(img_i in [0]):
+                print("img_i: ", img_i)
+                print(clip_s[0][0:10])
+                print(clip_est[0][0:10])
+                print(clip_est_normalized[0][0:10])
+            img_loss = clip_loss(clip_est_normalized, clip_s) #torch.Size([4096, 768])
         else:
             img_loss = img2mse(rgb, target_s)
         trans = extras['raw'][...,-1]
@@ -1029,7 +1059,6 @@ def train(env, flag, test_file, i_weights):
         #print("img_i: ", img_i)
         #print("clip_est: ", clip_est)
         #print("clip_s: ", clip_s)
-        print("iter: ", i)
         print("training loss: ", loss)
         psnr = mse2psnr(img_loss)
 
@@ -1037,7 +1066,6 @@ def train(env, flag, test_file, i_weights):
             img_loss0 = img2mse(extras['rgb0'], target_s)
             loss = loss + img_loss0
             psnr0 = mse2psnr(img_loss0)
-
         loss.backward()
         optimizer.step()
 
