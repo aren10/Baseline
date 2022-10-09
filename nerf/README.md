@@ -9,7 +9,7 @@ conda activate PL3DS_Baseline
 rm -r Baseline
 git clone https://github.com/aren10/Baseline.git
 cd Baseline/nerf
-python run_nerf.py --env linux --flag train --i_weights 50
+python run_nerf.py --env linux --flag train --i_weights 10
 python run_nerf.py --env linux --flag test --test_file 000050.tar
 ctrl + z
 cd /users/aren10/data/toybox-13/0

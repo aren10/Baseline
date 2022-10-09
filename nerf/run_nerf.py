@@ -947,14 +947,14 @@ def train(env, flag, test_file, i_weights):
         rays_rgb = torch.Tensor(rays_rgb).to(device)
 
     #______________________________________
-    N_iters = 200000 + 1
+    N_iters = 2 + 1
     print('Begin')
     print('TRAIN views are', i_train)
     print('TEST views are', i_test)
     print('VAL views are', i_val)
     print("using batching:", use_batching)
 
-
+    losses = []
     # Summary writers
     # writer = SummaryWriter(os.path.join(basedir, 'summaries', expname))
     
@@ -1060,6 +1060,7 @@ def train(env, flag, test_file, i_weights):
         #print("clip_est: ", clip_est)
         #print("clip_s: ", clip_s)
         print("training loss: ", loss)
+        losses.append(loss.cpu().detach().numpy())
         psnr = mse2psnr(img_loss)
 
         if 'rgb0' in extras:
@@ -1162,7 +1163,8 @@ def train(env, flag, test_file, i_weights):
         """
 
         global_step += 1
-
+    plt.plot(losses)
+    plt.show()
 
 import argparse
 if __name__=='__main__':
