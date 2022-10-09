@@ -593,7 +593,7 @@ def config_parser(env, flag):
         parser.add_argument("--clip_datadir", type=str, default='../data/Nesf0', 
                             help='input data directory')
     elif(env == 'linux'):
-        parser.add_argument("--datadir", type=str, default='/users/aren10/data/toybox-13/0/', 
+        parser.add_argument("--datadir", type=str, default='/users/aren10/data/0/', 
                             help='input data directory')
         parser.add_argument("--clip_datadir", type=str, default='/users/aren10/data/Nesf0', 
                             help='input data directory')
@@ -882,7 +882,7 @@ def train(env, flag, test_file, i_weights):
     # Short circuit if only rendering out from trained model
     if args.render_only: #False. Test' number of rays > train's number of rays
         print('RENDER ONLY')
-        print("i_test_shape: ", i_test.shape)
+        print("______i_test_shape: ", i_test.shape)
         with torch.no_grad():
             if args.render_test:
                 # render_test switches to test poses

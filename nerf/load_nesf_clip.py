@@ -141,11 +141,7 @@ def load_Nesf_CLIP_data(basedir, clip_basedir, env, use_CLIP = False):
         'sigma': 0,
     }
     #model = model(**model_args)#.cuda()
-    if(env == "linux"):
-        metadata_basedir = "/users/aren10/data/"
-    else:
-        metadata_basedir = basedir
-    with open(os.path.join(metadata_basedir,"metadata.json"), 'r') as fp: #base_dir is "../data/toybox-13/0"
+    with open(os.path.join(basedir,"metadata.json"), 'r') as fp: #base_dir is "../data/toybox-13/0"
             file = json.load(fp)
     splits = ['train', 'val', 'test']
     metas = {}
@@ -260,6 +256,7 @@ def load_Nesf_CLIP_data(basedir, clip_basedir, env, use_CLIP = False):
         imgs.append(img)
         poses.append(pose)
         index = (dataloader[i]["img_ids"])
+        print("___________index: ", index)
         # print(index[-5:])
         if use_CLIP:
             # fname = "rgba_" + index[-5:] + '_heat.npy'

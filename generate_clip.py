@@ -20,7 +20,7 @@ if __name__=='__main__':
 
     root_path = '/users/aren10/data/'
     #root_path = '../data/'
-    data_path = root_path + 'toybox-13/0/'
+    data_path = root_path + '0/'
     directories = os.listdir(data_path)
     for filename in directories:
         if filename[0:4] == 'rgba':
