@@ -590,12 +590,12 @@ def config_parser(env, flag):
     if(env == 'mac'):
         parser.add_argument("--datadir", type=str, default='../data/toybox-13/0/', 
                             help='input data directory')
-        parser.add_argument("--clip_datadir", type=str, default='../data/Nesf0', 
+        parser.add_argument("--clip_datadir", type=str, default='../data/Nesf0/', 
                             help='input data directory')
     elif(env == 'linux'):
         parser.add_argument("--datadir", type=str, default='/users/aren10/data/0/', 
                             help='input data directory')
-        parser.add_argument("--clip_datadir", type=str, default='/users/aren10/data/Nesf0', 
+        parser.add_argument("--clip_datadir", type=str, default='/users/aren10/data/Nesf0/', 
                             help='input data directory')
     # training options
     parser.add_argument("--netdepth", type=int, default=8, 
@@ -899,7 +899,7 @@ def train(env, flag, test_file, i_weights):
             print('test poses shape', render_poses.shape) #test poses shape torch.Size([40, 4, 4])
 
             if args.with_clip:
-                #print(clips.shape) (2, 1, 768, 1)
+                #print(clips.shape) (3, 1, 768, 1)
                 clips = np.squeeze(clips)
                 clips = np.expand_dims(np.expand_dims(clips, axis = 1), axis = 2)
                 one_matrix = np.ones((clips.shape[0], 256, 256, clips.shape[3]))
@@ -907,12 +907,21 @@ def train(env, flag, test_file, i_weights):
                 clips_ests, _ = render_CLIP_path(render_poses, hwf, K, args.chunk, render_kwargs_test, gt_imgs=images, savedir=testsavedir, render_factor=args.render_factor, use_clip = args.with_clip)
                 clips_ests = torch.tensor(clips_ests)
                 #print(clips_full[0,0,0,0:10])
-                #print(np.squeeze(np.load("../data/nesf0/rgba_00057_image_clip_feature.npy"))[0:10])
                 print(clips_full[0,0,0,0:10])
                 #print(clips_ests.shape) (2, 256, 256, 768)
                 clips_ests_normalized = (clips_ests - torch.unsqueeze(torch.min(clips_ests,-1)[0],-1)) / (torch.unsqueeze(torch.max(clips_ests,-1)[0],-1) - torch.unsqueeze(torch.min(clips_ests,-1)[0],-1))
                 print(clips_ests_normalized[0,0,0,0:10])
                 print("loss in test is: ", clip_loss(torch.tensor(clips_ests_normalized), torch.tensor(clips_full)))
+                
+                nerf_clip_297 = np.expand_dims(np.squeeze(clips_ests_normalized[0,:,:,:]), axis = 0)
+                gt_clip_297 = np.expand_dims(np.squeeze(np.load(args.clip_datadir + "rgba_00297_image_clip_feature.npy")), axis = 0)
+                gt_clip_287 = np.expand_dims(np.squeeze(np.load(args.clip_datadir + "rgba_00287_image_clip_feature.npy")), axis = 0)
+                gt_clip_296 = np.expand_dims(np.squeeze(np.load(args.clip_datadir + "rgba_00296_image_clip_feature.npy")), axis = 0)
+                print("test_same_dot_product: ", clip_loss(torch.tensor(nerf_clip_297), torch.tensor(nerf_clip_297)))
+                print("test_different_dot_product: ", clip_loss(torch.tensor(nerf_clip_297), torch.tensor(100+nerf_clip_297)))
+                print("same_loss: ", clip_loss(torch.tensor(nerf_clip_297), torch.tensor(gt_clip_297)))
+                print("similar_loss: ", clip_loss(torch.tensor(nerf_clip_297), torch.tensor(gt_clip_287)))
+                print("different_loss: ", clip_loss(torch.tensor(nerf_clip_297), torch.tensor(gt_clip_296)))
 
             else:
                 rgbs, _ = render_path(render_poses, hwf, K, args.chunk, render_kwargs_test, gt_imgs=images, savedir=testsavedir, render_factor=args.render_factor)
