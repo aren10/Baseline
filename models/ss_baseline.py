@@ -39,13 +39,13 @@ class SSBaseline(SLICViT):
             crop = im[y1:y2+1, x1:x2+1]
             crop = Image.fromarray(crop).convert('RGB')
             crop = crop.resize((224, 224))
-            crop = self.model.preprocess(crop)#.cuda()
+            crop = self.model.preprocess(crop).cuda()
             crops.append(crop)
         crops = torch.stack(crops, 0)
         with torch.no_grad():
             image_features = self.model.encode_image(crops)
 
-            text = clip.tokenize([text])#.cuda()
+            text = clip.tokenize([text]).cuda()
             text_features = self.model.encode_text(text)
 
             image_features = image_features / \
