@@ -913,7 +913,7 @@ def train(env, flag, test_file, i_weights):
                 print(clips_ests_normalized[0,0,0,0:10])
                 print("loss in test is: ", clip_loss(torch.tensor(clips_ests_normalized), torch.tensor(clips_full)))
                 
-                nerf_clip_297 = np.expand_dims(np.squeeze(clips_ests_normalized[0,:,:,:]), axis = 0)
+                nerf_clip_297 = np.expand_dims(np.squeeze(clips_ests_normalized[0,:,:,:].cpu().detach().numpy()), axis = 0)
                 gt_clip_297 = np.expand_dims(np.squeeze(np.load(args.clip_datadir + "rgba_00297_image_clip_feature.npy")), axis = 0)
                 gt_clip_287 = np.expand_dims(np.squeeze(np.load(args.clip_datadir + "rgba_00287_image_clip_feature.npy")), axis = 0)
                 gt_clip_296 = np.expand_dims(np.squeeze(np.load(args.clip_datadir + "rgba_00296_image_clip_feature.npy")), axis = 0)
