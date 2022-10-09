@@ -947,7 +947,7 @@ def train(env, flag, test_file, i_weights):
         rays_rgb = torch.Tensor(rays_rgb).to(device)
 
     #______________________________________
-    N_iters = 2 + 1
+    N_iters = 1000 + 1
     print('Begin')
     print('TRAIN views are', i_train)
     print('TEST views are', i_test)
