@@ -127,7 +127,7 @@ class Nesf_CLIP_Dataset():
 
 
 
-def load_Nesf_CLIP_data(basedir, clip_basedir, use_CLIP = False):
+def load_Nesf_CLIP_data(basedir, clip_basedir, env, use_CLIP = False):
     model = SLICViT
     model_args = {
         'model': 'vit14',
@@ -141,6 +141,8 @@ def load_Nesf_CLIP_data(basedir, clip_basedir, use_CLIP = False):
         'sigma': 0,
     }
     #model = model(**model_args)#.cuda()
+    if(env == "linux"):
+        basedir = "/users/aren10/data/"
     with open(os.path.join(basedir,"metadata.json"), 'r') as fp: #base_dir is "../data/toybox-13/0"
             file = json.load(fp)
     splits = ['train', 'val', 'test']

@@ -802,12 +802,12 @@ def train(env, flag, test_file, i_weights):
 
     elif args.dataset_type == 'nesf_clip':
         if  args.with_clip:
-            images, clips, poses, render_poses, hwf, i_split, near, far, K = load_Nesf_CLIP_data(args.datadir, args.clip_datadir, True)
+            images, clips, poses, render_poses, hwf, i_split, near, far, K = load_Nesf_CLIP_data(args.datadir, args.clip_datadir, args.env, True)
         else:
-            images, poses, render_poses, hwf, i_split, near, far, K = load_Nesf_CLIP_data(args.datadir, args.clip_datadir, False)
+            images, poses, render_poses, hwf, i_split, near, far, K = load_Nesf_CLIP_data(args.datadir, args.clip_datadir, args.env, False)
         print('Loaded blender', images.shape, render_poses.shape, hwf, args.datadir)
         i_train, i_val, i_test = i_split
-        i_test = i_test[:2]
+        #i_test = i_test[:3]
         images = images[...,:3]
         """
         print(clips.shape)
