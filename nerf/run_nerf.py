@@ -1173,7 +1173,9 @@ def train(env, flag, test_file, i_weights):
 
         global_step += 1
     plt.plot(losses)
+    plt.savefig("losses.png")
     plt.show()
+
 
 import argparse
 if __name__=='__main__':
