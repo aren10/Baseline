@@ -1032,6 +1032,7 @@ def train(env, flag, test_file, i_weights):
                     print(saliency_s.shape)                 
                 if args.with_clip:
                     one_matrix = torch.ones((target_s.shape[0], clip.shape[1]))
+                    # To do: 直接在导入的2d clip中coord_index
                     clip_reshaped = clip[:,:,0]
                     clip_s = clip_reshaped * one_matrix
 
